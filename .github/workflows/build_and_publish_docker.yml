@@ -14,12 +14,12 @@ permissions:
 
 env:
   DOCKER_IMAGE_REGISTRY: "ghcr.io"
-  DOCKER_USERNAME: "elie222"
+  DOCKER_USERNAME: "duartebarbosadev"
   DEPOT_PROJECT_ID: "2s1sh2pjrf"
 
 jobs:
   fetch-version:
-    if: github.repository == 'elie222/inbox-zero'
+    if: github.repository == 'duartebarbosadev/inbox-zero'
     runs-on: ubuntu-latest
 
     outputs:
@@ -41,7 +41,7 @@ jobs:
           echo "version=$version" >> $GITHUB_OUTPUT
 
   update_version_txt:
-    if: github.repository == 'elie222/inbox-zero'
+    if: github.repository == 'duartebarbosadev/inbox-zero'
     needs:
       - fetch-version
     runs-on: ubuntu-latest
@@ -91,7 +91,7 @@ jobs:
           tags: true
 
   build-docker:
-    if: github.repository == 'elie222/inbox-zero'
+    if: github.repository == 'duartebarbosadev/inbox-zero'
     name: "Build Docker Image"
     runs-on: ubuntu-latest
     needs:
