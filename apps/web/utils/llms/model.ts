@@ -70,12 +70,16 @@ function selectModel(
   switch (aiProvider) {
     case Provider.OPEN_AI: {
       const modelName = aiModel || "gpt-5.1";
+      // Security: Only use user's custom URL if ALLOW_USER_AI_PROVIDER_URL is enabled
+      const baseURL =
+        allowUserAiProviderUrl && aiBaseUrl ? aiBaseUrl : env.OPENAI_BASE_URL;
       return {
         provider: Provider.OPEN_AI,
         modelName,
-        model: createOpenAI({ apiKey: aiApiKey || env.OPENAI_API_KEY })(
-          modelName,
-        ),
+        model: createOpenAI({
+          apiKey: aiApiKey || env.OPENAI_API_KEY,
+          ...(baseURL ? { baseURL } : {}),
+        })(modelName),
         backupModel: getBackupModel(aiApiKey),
       };
     }
@@ -137,10 +141,11 @@ function selectModel(
       }
 
       // Security: Only use user's custom URL if ALLOW_USER_AI_PROVIDER_URL is enabled
+      // Note: baseURL should include /api (e.g., http://localhost:11434/api)
       const baseURL =
         allowUserAiProviderUrl && aiBaseUrl
           ? aiBaseUrl
-          : env.OLLAMA_BASE_URL || "http://localhost:11434";
+          : env.OLLAMA_BASE_URL || "http://localhost:11434/api";
       const ollama = createOllama({ baseURL });
 
       return {
