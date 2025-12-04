@@ -50,6 +50,7 @@ export const env = createEnv({
       .default("google/gemini-2.5-flash"),
 
     OPENAI_API_KEY: z.string().optional(),
+    OPENAI_BASE_URL: z.string().optional(), // For OpenAI-compatible servers (LM Studio, LocalAI, etc.)
     ANTHROPIC_API_KEY: z.string().optional(),
     BEDROCK_ACCESS_KEY: z.string().optional(),
     BEDROCK_SECRET_KEY: z.string().optional(),
@@ -117,6 +118,7 @@ export const env = createEnv({
     WHITELIST_FROM: z.string().optional(),
     USE_BACKUP_MODEL: z.coerce.boolean().optional().default(false),
     HEALTH_API_KEY: z.string().optional(),
+    ALLOW_USER_AI_PROVIDER_URL: z.coerce.boolean().optional().default(false),
 
     // license
     LICENSE_1_SEAT_VARIANT_ID: z.coerce.number().optional(),

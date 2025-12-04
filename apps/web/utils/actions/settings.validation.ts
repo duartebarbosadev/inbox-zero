@@ -37,6 +37,7 @@ export const saveAiSettingsBody = z
     ]),
     aiModel: z.string(),
     aiApiKey: z.string().optional(),
+    aiBaseUrl: z.string().url().optional().or(z.literal("")),
   })
   .superRefine((val, ctx) => {
     const requiresApiKey =
@@ -47,6 +48,19 @@ export const saveAiSettingsBody = z
         code: z.ZodIssueCode.custom,
         message: "You must provide an API key for this provider",
         path: ["aiApiKey"],
+      });
+    }
+
+    // aiBaseUrl is only valid for Ollama and OpenAI providers (for LM Studio, LocalAI, etc.)
+    if (
+      val.aiBaseUrl &&
+      val.aiProvider !== Provider.OLLAMA &&
+      val.aiProvider !== Provider.OPEN_AI
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Server URL is only supported for Ollama and OpenAI providers",
+        path: ["aiBaseUrl"],
       });
     }
   });

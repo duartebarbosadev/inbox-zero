@@ -8,7 +8,11 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { createGateway } from "@ai-sdk/gateway";
 import { createOllama } from "ollama-ai-provider-v2";
 import { env } from "@/env";
-import { Provider } from "@/utils/llms/config";
+import {
+  Provider,
+  allowUserAiProviderUrl,
+  supportsOllama,
+} from "@/utils/llms/config";
 import type { UserAIFields } from "@/utils/llms/types";
 import { createScopedLogger } from "@/utils/logger";
 
@@ -58,22 +62,28 @@ function selectModel(
     aiProvider,
     aiModel,
     aiApiKey,
+    aiBaseUrl,
   }: {
     aiProvider: string;
     aiModel: string | null;
     aiApiKey: string | null;
+    aiBaseUrl?: string | null;
   },
   providerOptions?: Record<string, any>,
 ): SelectModel {
   switch (aiProvider) {
     case Provider.OPEN_AI: {
       const modelName = aiModel || "gpt-5.1";
+      // Security: Only use user's custom URL if ALLOW_USER_AI_PROVIDER_URL is enabled
+      const baseURL =
+        allowUserAiProviderUrl && aiBaseUrl ? aiBaseUrl : env.OPENAI_BASE_URL;
       return {
         provider: Provider.OPEN_AI,
         modelName,
-        model: createOpenAI({ apiKey: aiApiKey || env.OPENAI_API_KEY })(
-          modelName,
-        ),
+        model: createOpenAI({
+          apiKey: aiApiKey || env.OPENAI_API_KEY,
+          ...(baseURL ? { baseURL } : {}),
+        })(modelName),
         backupModel: getBackupModel(aiApiKey),
       };
     }
@@ -134,7 +144,13 @@ function selectModel(
         throw new Error("Ollama model must be specified");
       }
 
-      const baseURL = env.OLLAMA_BASE_URL || "http://localhost:11434";
+      // Security: Only use user's custom URL if ALLOW_USER_AI_PROVIDER_URL is enabled
+      // Normalize URL - strip /api if present, then add it back
+      const rawUrl =
+        allowUserAiProviderUrl && aiBaseUrl
+          ? aiBaseUrl
+          : env.OLLAMA_BASE_URL || "http://localhost:11434";
+      const baseURL = `${rawUrl.replace(/\/api\/?$/, "")}/api`;
       const ollama = createOllama({ baseURL });
 
       return {
@@ -288,9 +304,17 @@ function selectDefaultModel(userAi: UserAIFields): SelectModel {
 
   const providerOptions: Record<string, any> = {};
 
-  // If user has not api key set, then use default model
-  // If they do they can use the model of their choice
-  if (aiApiKey || userAi.aiProvider === Provider.OLLAMA) {
+  // Check if user's selected provider is still valid
+  // (e.g., Ollama may have been disabled after user selected it)
+  const isUserProviderValid =
+    userAi.aiProvider !== Provider.OLLAMA || supportsOllama;
+
+  // If user has an API key set, or has Ollama (which doesn't need API key),
+  // and their provider is still valid, use their settings
+  if (
+    (aiApiKey || userAi.aiProvider === Provider.OLLAMA) &&
+    isUserProviderValid
+  ) {
     aiProvider = userAi.aiProvider || env.DEFAULT_LLM_PROVIDER;
     aiModel = userAi.aiModel || null;
   } else {
@@ -320,6 +344,7 @@ function selectDefaultModel(userAi: UserAIFields): SelectModel {
       aiProvider,
       aiModel,
       aiApiKey,
+      aiBaseUrl: userAi.aiBaseUrl,
     },
     providerOptions,
   );

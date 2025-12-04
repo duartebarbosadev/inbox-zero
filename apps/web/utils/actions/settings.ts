@@ -43,14 +43,29 @@ export const updateAiSettingsAction = actionClientUser
   .action(
     async ({
       ctx: { userId },
-      parsedInput: { aiProvider, aiModel, aiApiKey },
+      parsedInput: { aiProvider, aiModel, aiApiKey, aiBaseUrl },
     }) => {
       await prisma.user.update({
         where: { id: userId },
         data:
           aiProvider === DEFAULT_PROVIDER
-            ? { aiProvider: null, aiModel: null, aiApiKey: null }
-            : { aiProvider, aiModel, aiApiKey },
+            ? {
+                aiProvider: null,
+                aiModel: null,
+                aiApiKey: null,
+                aiBaseUrl: null,
+              }
+            : {
+                aiProvider,
+                aiModel,
+                aiApiKey,
+                // Only store aiBaseUrl for Ollama and OpenAI providers
+                aiBaseUrl:
+                  aiProvider === Provider.OLLAMA ||
+                  aiProvider === Provider.OPEN_AI
+                    ? aiBaseUrl || null
+                    : null,
+              },
       });
     },
   );
@@ -179,7 +194,7 @@ export const updateDigestItemsAction = actionClient
 
 function toUserAiFields(input: SaveAiSettingsBody): UserAIFields {
   if (input.aiProvider === DEFAULT_PROVIDER) {
-    return { aiProvider: null, aiModel: null, aiApiKey: null };
+    return { aiProvider: null, aiModel: null, aiApiKey: null, aiBaseUrl: null };
   }
 
   return {
@@ -187,5 +202,11 @@ function toUserAiFields(input: SaveAiSettingsBody): UserAIFields {
     aiModel: input.aiModel || null,
     aiApiKey:
       input.aiProvider === Provider.OLLAMA ? null : (input.aiApiKey ?? null),
+    // Only use aiBaseUrl for providers that support custom URLs
+    aiBaseUrl:
+      input.aiProvider === Provider.OLLAMA ||
+      input.aiProvider === Provider.OPEN_AI
+        ? input.aiBaseUrl || null
+        : null,
   };
 }
