@@ -28,6 +28,34 @@ type SelectModel = {
   backupModel: LanguageModelV2 | null;
 };
 
+// Ensure OpenAI-compatible URLs include the /v1 prefix so the Responses API resolves correctly
+export function normalizeOpenAiBaseUrl(baseUrl?: string | null) {
+  if (!baseUrl) return null;
+
+  try {
+    const url = new URL(baseUrl);
+    const path = url.pathname.replace(/\/+$/, "") || "/";
+
+    if (path === "/v1") return `${url.origin}${path}`;
+    if (path.startsWith("/v1/")) return `${url.origin}/v1`;
+
+    const v1Index = path.indexOf("/v1/");
+    if (v1Index !== -1) {
+      return `${url.origin}${path.slice(0, v1Index + 3)}`;
+    }
+
+    if (path.endsWith("/v1")) {
+      return `${url.origin}${path}`;
+    }
+
+    const normalizedPath = path === "/" ? "/v1" : `${path}/v1`;
+    return `${url.origin}${normalizedPath}`;
+  } catch {
+    const cleaned = baseUrl.replace(/\/+$/, "");
+    return cleaned.endsWith("/v1") ? cleaned : `${cleaned}/v1`;
+  }
+}
+
 export function getModel(
   userAi: UserAIFields,
   modelType: ModelType = "default",
@@ -74,9 +102,10 @@ function selectModel(
   switch (aiProvider) {
     case Provider.OPEN_AI: {
       const modelName = aiModel || "gpt-5.1";
+      const baseURL = normalizeOpenAiBaseUrl(
+        allowUserAiProviderUrl && aiBaseUrl ? aiBaseUrl : env.OPENAI_BASE_URL,
+      );
       // Security: Only use user's custom URL if ALLOW_USER_AI_PROVIDER_URL is enabled
-      const baseURL =
-        allowUserAiProviderUrl && aiBaseUrl ? aiBaseUrl : env.OPENAI_BASE_URL;
       return {
         provider: Provider.OPEN_AI,
         modelName,
