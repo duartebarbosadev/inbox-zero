@@ -2,12 +2,76 @@ name: CLI Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 1.2.3). If omitted, the workflow bumps the latest cli-v tag."
+        required: false
+        type: string
 
 permissions:
   contents: write
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      current: ${{ steps.version.outputs.current }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version and create tag
+        id: version
+        run: |
+          set -euo pipefail
+
+          git fetch --tags --force
+
+          VERSION=$(INPUT_VERSION="${{ inputs.version || '' }}" python <<'PY'
+import os
+import re
+import subprocess
+import sys
+
+input_version = os.environ.get("INPUT_VERSION", "").strip()
+if input_version:
+    print(input_version)
+    sys.exit(0)
+
+try:
+    last_tag = subprocess.check_output(
+        ["git", "describe", "--tags", "--abbrev=0", "--match", "cli-v*"],
+        text=True,
+    ).strip()
+except subprocess.CalledProcessError:
+    last_tag = ""
+
+if last_tag:
+    match = re.match(r"cli-v(\d+)\.(\d+)\.(\d+)(.*)", last_tag)
+    if not match:
+        sys.exit(f"Last tag '{last_tag}' is not in cli-vMAJOR.MINOR.PATCH format")
+
+    major, minor, patch, suffix = match.groups()
+    print(f"{int(major)}.{int(minor)}.{int(patch) + 1}{suffix}")
+else:
+    print("0.0.1")
+PY
+)
+
+          echo "current=$VERSION" >> "$GITHUB_OUTPUT"
+
+          TAG="cli-v${VERSION}"
+          if git rev-parse -q --verify "refs/tags/$TAG"; then
+            echo "Tag $TAG already exists; skipping creation."
+          else
+            git tag -a "$TAG" -m "CLI Release $TAG"
+            git push origin "$TAG"
+          fi
+
   build:
+    needs: version
     strategy:
       matrix:
         include:
@@ -25,6 +89,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -50,22 +116,21 @@ jobs:
           path: packages/cli/dist/${{ matrix.artifact }}.tar.gz
 
   release:
-    needs: build
+    needs: [version, build]
     runs-on: ubuntu-latest
+
+    env:
+      VERSION: ${{ needs.version.outputs.current }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-
-      - name: Get version
-        id: version
-        run: |
-          VERSION=$(cat version.txt | tr -d 'v' | tr -d '\n')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Calculate SHA256
         id: sha
@@ -77,8 +142,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: cli-v${{ steps.version.outputs.version }}
-          name: CLI v${{ steps.version.outputs.version }}
+          tag_name: cli-v${{ env.VERSION }}
+          name: CLI v${{ env.VERSION }}
           draft: false
           prerelease: false
           files: |
@@ -86,7 +151,7 @@ jobs:
             artifacts/inbox-zero-darwin-x64/inbox-zero-darwin-x64.tar.gz
             artifacts/inbox-zero-linux-x64/inbox-zero-linux-x64.tar.gz
           body: |
-            ## Inbox Zero CLI v${{ steps.version.outputs.version }}
+            ## Inbox Zero CLI v${{ env.VERSION }}
 
             ### Installation
 
@@ -99,17 +164,17 @@ jobs:
             **Manual installation:**
             ```bash
             # macOS (Apple Silicon)
-            curl -L https://github.com/elie222/inbox-zero/releases/download/cli-v${{ steps.version.outputs.version }}/inbox-zero-darwin-arm64.tar.gz | tar xz
+            curl -L https://github.com/elie222/inbox-zero/releases/download/cli-v${{ env.VERSION }}/inbox-zero-darwin-arm64.tar.gz | tar xz
             chmod +x inbox-zero-darwin-arm64
             sudo mv inbox-zero-darwin-arm64 /usr/local/bin/inbox-zero
 
             # macOS (Intel)
-            curl -L https://github.com/elie222/inbox-zero/releases/download/cli-v${{ steps.version.outputs.version }}/inbox-zero-darwin-x64.tar.gz | tar xz
+            curl -L https://github.com/elie222/inbox-zero/releases/download/cli-v${{ env.VERSION }}/inbox-zero-darwin-x64.tar.gz | tar xz
             chmod +x inbox-zero-darwin-x64
             sudo mv inbox-zero-darwin-x64 /usr/local/bin/inbox-zero
 
             # Linux
-            curl -L https://github.com/elie222/inbox-zero/releases/download/cli-v${{ steps.version.outputs.version }}/inbox-zero-linux-x64.tar.gz | tar xz
+            curl -L https://github.com/elie222/inbox-zero/releases/download/cli-v${{ env.VERSION }}/inbox-zero-linux-x64.tar.gz | tar xz
             chmod +x inbox-zero-linux-x64
             sudo mv inbox-zero-linux-x64 /usr/local/bin/inbox-zero
             ```
@@ -132,7 +197,7 @@ jobs:
               content = f.read()
           
           # Update version
-          content = re.sub(r'version "[^"]*"', 'version "${{ steps.version.outputs.version }}"', content)
+          content = re.sub(r'version "[^"]*"', 'version "${VERSION}"', content)
           
           # Update SHA256 for darwin-arm64 (first sha256 after "on_arm do")
           content = re.sub(
@@ -166,6 +231,6 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add Formula/inbox-zero.rb
-          git diff --staged --quiet || git commit -m "chore: update Homebrew formula for CLI v${{ steps.version.outputs.version }}"
+          git diff --staged --quiet || git commit -m "chore: update Homebrew formula for CLI v${VERSION}"
           git push origin HEAD:${{ github.ref_name }}
 

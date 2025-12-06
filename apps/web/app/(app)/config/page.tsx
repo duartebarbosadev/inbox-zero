@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import { env } from "@/env";
 import { auth } from "@/utils/auth";
 import { isAdmin } from "@/utils/admin";
@@ -188,10 +186,5 @@ function Row({ label, value }: { label: string; value: string | boolean }) {
 
 // Read version at build time
 function getVersion(): string {
-  try {
-    const versionPath = path.join(process.cwd(), "../../version.txt");
-    return fs.readFileSync(versionPath, "utf-8").trim();
-  } catch {
-    return "unknown";
-  }
+  return env.NEXT_PUBLIC_APP_VERSION ?? process.env.NEXT_PUBLIC_APP_VERSION ?? "unknown";
 }
