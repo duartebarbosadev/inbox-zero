@@ -76,8 +76,7 @@ export function BulkRunRules() {
                   the run to unread messages.
                 </SectionDescription>
                 <SectionDescription className="mt-0">
-                  Currently set to process
-                  {" "}
+                  Currently set to process{" "}
                   <span className="font-medium">
                     {includeRead
                       ? "both read and unread emails"
