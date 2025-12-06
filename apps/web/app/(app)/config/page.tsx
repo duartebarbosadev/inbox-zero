@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import { env } from "@/env";
 import { auth } from "@/utils/auth";
 import { isAdmin } from "@/utils/admin";
@@ -10,7 +9,7 @@ export default async function AdminConfigPage() {
 
   const isUserAdmin = await isAdmin({ email: session?.user.email });
 
-  const version = getVersion();
+  const version = env.NEXT_PUBLIC_APP_VERSION ?? "unknown";
 
   const info = {
     version,
@@ -183,26 +182,4 @@ function Row({ label, value }: { label: string; value: string | boolean }) {
       <span className="font-mono text-sm text-slate-900">{displayValue}</span>
     </div>
   );
-}
-
-// Read version at build time
-function getVersion(): string {
-  if (process.env.NEXT_PUBLIC_APP_VERSION) {
-    return process.env.NEXT_PUBLIC_APP_VERSION;
-  }
-
-  const commands = [
-    "git describe --tags --abbrev=0",
-    "git rev-parse --short HEAD",
-  ];
-
-  for (const command of commands) {
-    try {
-      return execSync(command).toString().trim();
-    } catch {
-      continue;
-    }
-  }
-
-  return "unknown";
 }
