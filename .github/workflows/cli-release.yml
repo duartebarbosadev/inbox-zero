@@ -200,13 +200,16 @@ PY
       - name: Update Homebrew formula
         run: |
           python3 << 'EOF'
+          import os
           import re
-          
+
+          version = os.environ["VERSION"]
+
           with open('Formula/inbox-zero.rb', 'r') as f:
               content = f.read()
-          
+
           # Update version
-          content = re.sub(r'version "[^"]*"', 'version "${VERSION}"', content)
+          content = re.sub(r'version "[^"]*"', f'version "{version}"', content)
           
           # Update SHA256 for darwin-arm64 (first sha256 after "on_arm do")
           content = re.sub(
