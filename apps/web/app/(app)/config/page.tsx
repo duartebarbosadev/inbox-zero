@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import { env } from "@/env";
 import { auth } from "@/utils/auth";
 import { isAdmin } from "@/utils/admin";
@@ -11,7 +9,7 @@ export default async function AdminConfigPage() {
 
   const isUserAdmin = await isAdmin({ email: session?.user.email });
 
-  const version = getVersion();
+  const version = env.NEXT_PUBLIC_APP_VERSION ?? "unknown";
 
   const info = {
     version,
@@ -184,14 +182,4 @@ function Row({ label, value }: { label: string; value: string | boolean }) {
       <span className="font-mono text-sm text-slate-900">{displayValue}</span>
     </div>
   );
-}
-
-// Read version at build time
-function getVersion(): string {
-  try {
-    const versionPath = path.join(process.cwd(), "../../version.txt");
-    return fs.readFileSync(versionPath, "utf-8").trim();
-  } catch {
-    return "unknown";
-  }
 }
