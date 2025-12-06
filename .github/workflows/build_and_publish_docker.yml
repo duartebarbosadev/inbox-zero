@@ -4,9 +4,12 @@ run-name: "Build Inbox Zero Docker Image"
 on:
   push:
     branches: ["main"]
-    paths-ignore:
-      - version.txt
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 1.2.3). If omitted, the workflow bumps the latest tag."
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -29,22 +32,60 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Calculate and bump version
+      - name: Determine version and create tag
         id: version
         run: |
-          current=$(cat version.txt)
-          echo "current=$current" >> $GITHUB_OUTPUT
-          echo "image_name=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
-          
-          IFS='.' read -r major minor patch <<< "$current"
-          next="${major}.${minor}.$((patch + 1))"
-          echo "$next" > version.txt
-          
+          set -euo pipefail
+
+          git fetch --tags --force
+
+          input_version="${{ inputs.version || '' }}"
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            input_version=""
+          fi
+
+          current=$(INPUT_VERSION="$input_version" python <<'PY'
+import os
+import re
+import subprocess
+import sys
+
+input_version = os.environ.get("INPUT_VERSION", "").strip()
+if input_version:
+    print(input_version)
+    sys.exit(0)
+
+try:
+    last_tag = subprocess.check_output(
+        ["git", "describe", "--tags", "--abbrev=0"], text=True
+    ).strip()
+except subprocess.CalledProcessError:
+    last_tag = ""
+
+if last_tag:
+    match = re.match(r"v?(\d+)\.(\d+)\.(\d+)(.*)", last_tag)
+    if not match:
+        sys.exit(f"Last tag '{last_tag}' is not in vMAJOR.MINOR.PATCH format")
+
+    major, minor, patch, suffix = match.groups()
+    print(f"v{int(major)}.{int(minor)}.{int(patch) + 1}{suffix}")
+else:
+    print("v0.0.1")
+PY
+)
+
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "image_name=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
           git config user.email "github-actions@getinboxzero.com"
           git config user.name "github-actions"
-          git tag -a "$current" -m "Release $current"
-          git commit -a -m "Bump version to $next"
-          git push origin main --follow-tags
+
+          if git rev-parse -q --verify "refs/tags/$current"; then
+            echo "Tag $current already exists; skipping creation."
+          else
+            git tag -a "$current" -m "Release $current"
+            git push origin "$current"
+          fi
 
   build:
     if: github.repository == 'duartebarbosadev/inbox-zero'
@@ -84,6 +125,8 @@ jobs:
           provenance: false
           cache-from: type=gha,scope=${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+          build-args: |
+            NEXT_PUBLIC_APP_VERSION=${{ needs.version.outputs.current }}
           tags: |
             ${{ env.REGISTRY }}/${{ needs.version.outputs.image_name }}:${{ needs.version.outputs.current }}-${{ matrix.arch }}
 
