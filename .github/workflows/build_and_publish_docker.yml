@@ -52,12 +52,16 @@ import sys
 
 input_version = os.environ.get("INPUT_VERSION", "").strip()
 if input_version:
+    if not input_version.startswith("v"):
+        input_version = f"v{input_version}"
+
     print(input_version)
     sys.exit(0)
 
 try:
     last_tag = subprocess.check_output(
-        ["git", "describe", "--tags", "--abbrev=0"], text=True
+        ["git", "describe", "--tags", "--abbrev=0", "--match", "v*"],
+        text=True,
     ).strip()
 except subprocess.CalledProcessError:
     last_tag = ""
