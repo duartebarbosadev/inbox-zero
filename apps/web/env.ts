@@ -159,6 +159,7 @@ export const env = createEnv({
     NEXT_PUBLIC_BASE_URL: z.string(),
     NEXT_PUBLIC_CONTACTS_ENABLED: z.coerce.boolean().optional().default(false),
     NEXT_PUBLIC_EMAIL_SEND_ENABLED: booleanString.default(true),
+    NEXT_PUBLIC_APP_VERSION: z.string().optional().default("unknown"),
     NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
     NEXT_PUBLIC_SUPPORT_EMAIL: z
       .string()
@@ -226,6 +227,7 @@ export const env = createEnv({
     NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
     NEXT_PUBLIC_CONTACTS_ENABLED: process.env.NEXT_PUBLIC_CONTACTS_ENABLED,
     NEXT_PUBLIC_EMAIL_SEND_ENABLED: process.env.NEXT_PUBLIC_EMAIL_SEND_ENABLED,
+    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
     NEXT_PUBLIC_FREE_UNSUBSCRIBE_CREDITS:
       process.env.NEXT_PUBLIC_FREE_UNSUBSCRIBE_CREDITS,
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,

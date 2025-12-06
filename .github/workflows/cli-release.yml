@@ -55,7 +55,10 @@ except subprocess.CalledProcessError:
 if last_tag:
     match = re.match(r"cli-v(\d+)\.(\d+)\.(\d+)(.*)", last_tag)
     if not match:
-        sys.exit(f"Last tag '{last_tag}' is not in cli-vMAJOR.MINOR.PATCH format")
+        sys.stderr.write(
+            f"Last tag '{last_tag}' is not in cli-vMAJOR.MINOR.PATCH format\n"
+        )
+        sys.exit(1)
 
     major, minor, patch, suffix = match.groups()
     print(f"{int(major)}.{int(minor)}.{int(patch) + 1}{suffix}")
