@@ -1,5 +1,4 @@
-import fs from "node:fs";
-import path from "node:path";
+import { execSync } from "node:child_process";
 import { env } from "@/env";
 import { auth } from "@/utils/auth";
 import { isAdmin } from "@/utils/admin";
@@ -188,10 +187,22 @@ function Row({ label, value }: { label: string; value: string | boolean }) {
 
 // Read version at build time
 function getVersion(): string {
-  try {
-    const versionPath = path.join(process.cwd(), "../../version.txt");
-    return fs.readFileSync(versionPath, "utf-8").trim();
-  } catch {
-    return "unknown";
+  if (process.env.NEXT_PUBLIC_APP_VERSION) {
+    return process.env.NEXT_PUBLIC_APP_VERSION;
   }
+
+  const commands = [
+    "git describe --tags --abbrev=0",
+    "git rev-parse --short HEAD",
+  ];
+
+  for (const command of commands) {
+    try {
+      return execSync(command).toString().trim();
+    } catch {
+      continue;
+    }
+  }
+
+  return "unknown";
 }
