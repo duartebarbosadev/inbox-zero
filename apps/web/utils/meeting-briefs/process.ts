@@ -24,6 +24,7 @@ export type EmailAccountForBrief = {
     aiProvider: string | null;
     aiModel: string | null;
     aiApiKey: string | null;
+    aiBaseUrl: string | null;
   };
   account: {
     provider: string;
@@ -101,6 +102,7 @@ export async function processMeetingBriefings({
           aiProvider: true,
           aiModel: true,
           aiApiKey: true,
+          aiBaseUrl: true,
         },
       },
       account: {
