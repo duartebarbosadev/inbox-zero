@@ -55,13 +55,17 @@ cp apps/web/.env.example apps/web/.env
 | `GROQ_API_KEY` | No | Groq API key | — |
 | `OPENROUTER_API_KEY` | No | OpenRouter API key | — |
 | `AI_GATEWAY_API_KEY` | No | AI Gateway API key | — |
+| `PERPLEXITY_API_KEY` | No | Perplexity API key for guest research for meeting briefs | — |
 | **AWS Bedrock** ||||
 | `BEDROCK_ACCESS_KEY` | No | AWS access key for Bedrock. See [AI SDK Bedrock documentation](https://ai-sdk.dev/providers/ai-sdk-providers/amazon-bedrock). | — |
 | `BEDROCK_SECRET_KEY` | No | AWS secret key for Bedrock | — |
 | `BEDROCK_REGION` | No | AWS region for Bedrock | `us-west-2` |
 | **Ollama (Local LLM)** ||||
 | `OLLAMA_BASE_URL` | No | Ollama server URL (e.g., `http://localhost:11434`) | — |
-| `NEXT_PUBLIC_OLLAMA_MODEL` | No | Model to use with Ollama | — |
+| `OLLAMA_MODEL` | No | Model to use with Ollama (e.g., `llama3`) | — |
+| **LM Studio (Local LLM)** ||||
+| `LM_STUDIO_BASE_URL` | No | LM Studio server URL (e.g., `http://localhost:1234`) | — |
+| **Security** ||||
 | `ALLOW_USER_AI_PROVIDER_URL` | No | ⚠️ **Security Risk** - Allow users to set custom AI provider URLs (Ollama/LM Studio). See [Security Warning](#allow_user_ai_provider_url-security) below. | `false` |
 | **Background Jobs (QStash)** ||||
 | `QSTASH_TOKEN` | No | QStash API token | — |

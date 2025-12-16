@@ -58,8 +58,8 @@ vi.mock("@/env", () => ({
     OPENROUTER_API_KEY: "test-openrouter-key",
     OPENROUTER_BACKUP_MODEL: "google/gemini-2.5-flash",
     OLLAMA_BASE_URL: "http://localhost:11434",
+    OLLAMA_MODEL: "llama3",
     LM_STUDIO_BASE_URL: "http://localhost:1234",
-    NEXT_PUBLIC_OLLAMA_MODEL: "llama3",
     BEDROCK_REGION: "us-west-2",
     BEDROCK_ACCESS_KEY: "",
     BEDROCK_SECRET_KEY: "",
@@ -85,7 +85,7 @@ describe("Models", () => {
     vi.mocked(env).DEFAULT_LLM_MODEL = undefined;
     vi.mocked(env).BEDROCK_ACCESS_KEY = "";
     vi.mocked(env).BEDROCK_SECRET_KEY = "";
-    vi.mocked(env).NEXT_PUBLIC_OLLAMA_MODEL = "llama3";
+    vi.mocked(env).OLLAMA_MODEL = "llama3";
     vi.mocked(env).OLLAMA_BASE_URL = "http://localhost:11434";
     vi.mocked(env).LM_STUDIO_BASE_URL = "http://localhost:1234";
   });

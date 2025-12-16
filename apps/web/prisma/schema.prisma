@@ -142,6 +142,9 @@ model EmailAccount {
   autoCategorizeSenders     Boolean           @default(false)
   multiRuleSelectionEnabled Boolean           @default(false)
 
+  meetingBriefingsEnabled       Boolean @default(false)
+  meetingBriefingsMinutesBefore Int     @default(240) // 4 hours in minutes
+
   digestSchedule Schedule?
 
   userId    String
@@ -165,12 +168,14 @@ model EmailAccount {
   chats            Chat[]
   digests          Digest[]
   scheduledActions ScheduledAction[]
+  responseTimes    ResponseTime[]
 
   members             Member[]
   invitations         Invitation[]
   ssoproviders        SsoProvider[]
   calendarConnections CalendarConnection[]
   mcpConnections      McpConnection[]
+  meetingBriefings    MeetingBriefing[]
 
   @@index([userId])
   @@index([lastSummaryEmailAt])
@@ -706,6 +711,23 @@ model EmailMessage {
   @@index([emailAccountId, fromName])
 }
 
+model ResponseTime {
+  id                String   @id @default(cuid())
+  createdAt         DateTime @default(now())
+  threadId          String
+  sentMessageId     String
+  receivedMessageId String
+  responseTimeMins  Int // Denormalized: (sentAt - receivedAt) in minutes
+  receivedAt        DateTime
+  sentAt            DateTime
+
+  emailAccountId String
+  emailAccount   EmailAccount @relation(fields: [emailAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([emailAccountId, sentMessageId])
+  @@index([emailAccountId, sentAt])
+}
+
 model ThreadTracker {
   id        String            @id @default(cuid())
   createdAt DateTime          @default(now())
@@ -911,6 +933,23 @@ model Calendar {
   connection   CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   @@unique([connectionId, calendarId])
+}
+
+model MeetingBriefing {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  calendarEventId String // External event ID from Google/Microsoft
+  eventTitle      String
+  eventStartTime  DateTime
+  guestCount      Int
+  status          MeetingBriefingStatus
+
+  emailAccountId String
+  emailAccount   EmailAccount @relation(fields: [emailAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([emailAccountId, calendarEventId]) // Prevent duplicate briefings
+  @@index([emailAccountId])
 }
 
 model Referral {
@@ -1141,4 +1180,11 @@ enum SchedulingStatus {
   PENDING
   SCHEDULED
   FAILED
+}
+
+enum MeetingBriefingStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
 }

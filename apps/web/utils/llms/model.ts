@@ -102,7 +102,7 @@ export type ModelType = "default" | "economy" | "chat";
 
 export type ProviderOptions = Record<string, Record<string, JSONValue>>;
 
-type SelectModel = {
+export type SelectModel = {
   provider: string;
   modelName: string;
   model: LanguageModelV2;
@@ -142,8 +142,9 @@ export function normalizeOpenAiBaseUrl(baseUrl?: string | null) {
 export function getModel(
   userAi: UserAIFields,
   modelType: ModelType = "default",
+  online = false,
 ): SelectModel {
-  const data = selectModelByType(userAi, modelType);
+  const data = selectModelByType(userAi, modelType, online);
 
   logger.info("Using model", {
     modelType,
@@ -156,16 +157,20 @@ export function getModel(
   return data;
 }
 
-function selectModelByType(userAi: UserAIFields, modelType: ModelType) {
-  if (userAi.aiApiKey) return selectDefaultModel(userAi);
+function selectModelByType(
+  userAi: UserAIFields,
+  modelType: ModelType,
+  online = false,
+) {
+  if (userAi.aiApiKey) return selectDefaultModel(userAi, online);
 
   switch (modelType) {
     case "economy":
-      return selectEconomyModel(userAi);
+      return selectEconomyModel(userAi, online);
     case "chat":
-      return selectChatModel(userAi);
+      return selectChatModel(userAi, online);
     default:
-      return selectDefaultModel(userAi);
+      return selectDefaultModel(userAi, online);
   }
 }
 
@@ -182,6 +187,7 @@ function selectModel(
     aiBaseUrl?: string | null;
   },
   providerOptions?: ProviderOptions,
+  online = false,
 ): SelectModel {
   switch (aiProvider) {
     case Provider.OPEN_AI: {
@@ -233,7 +239,9 @@ function selectModel(
       };
     }
     case Provider.OPENROUTER: {
-      const modelName = aiModel || "anthropic/claude-sonnet-4.5";
+      let modelName = aiModel || "anthropic/claude-sonnet-4.5";
+      if (online) modelName += ":online";
+
       const openrouter = createOpenRouter({
         apiKey: aiApiKey || env.OPENROUTER_API_KEY,
         headers: {
@@ -406,7 +414,7 @@ function createOpenRouterProviderOptions(providers: string): ProviderOptions {
  * - Bulk processing emails
  * - Any task with large context windows where cost efficiency matters
  */
-function selectEconomyModel(userAi: UserAIFields): SelectModel {
+function selectEconomyModel(userAi: UserAIFields, online = false): SelectModel {
   if (env.ECONOMY_LLM_PROVIDER && env.ECONOMY_LLM_MODEL) {
     const apiKey = getProviderApiKey(env.ECONOMY_LLM_PROVIDER);
     if (!apiKey && providerRequiresApiKey(env.ECONOMY_LLM_PROVIDER)) {
@@ -434,6 +442,7 @@ function selectEconomyModel(userAi: UserAIFields): SelectModel {
         aiApiKey: apiKey ?? null,
       },
       providerOptions,
+      online,
     );
   }
 
@@ -443,7 +452,7 @@ function selectEconomyModel(userAi: UserAIFields): SelectModel {
 /**
  * Selects the appropriate chat model for fast conversational tasks
  */
-function selectChatModel(userAi: UserAIFields): SelectModel {
+function selectChatModel(userAi: UserAIFields, online = false): SelectModel {
   if (env.CHAT_LLM_PROVIDER && env.CHAT_LLM_MODEL) {
     const apiKey = getProviderApiKey(env.CHAT_LLM_PROVIDER);
     if (!apiKey && providerRequiresApiKey(env.CHAT_LLM_PROVIDER)) {
@@ -471,13 +480,14 @@ function selectChatModel(userAi: UserAIFields): SelectModel {
         aiApiKey: apiKey ?? null,
       },
       providerOptions,
+      online,
     );
   }
 
   return selectDefaultModel(userAi);
 }
 
-function selectDefaultModel(userAi: UserAIFields): SelectModel {
+function selectDefaultModel(userAi: UserAIFields, online = false): SelectModel {
   let aiProvider: string;
   let aiModel: string | null = null;
   const aiApiKey = userAi.aiApiKey;
@@ -519,6 +529,7 @@ function selectDefaultModel(userAi: UserAIFields): SelectModel {
       aiBaseUrl: userAi.aiBaseUrl,
     },
     providerOptions,
+    online,
   );
 }
 
@@ -534,6 +545,7 @@ function getProviderApiKey(provider: string) {
     [Provider.GROQ]: env.GROQ_API_KEY,
     [Provider.OPENROUTER]: env.OPENROUTER_API_KEY,
     [Provider.AI_GATEWAY]: env.AI_GATEWAY_API_KEY,
+    [Provider.OLLAMA]: "ollama-local",
   };
 
   return providerApiKeys[provider];
